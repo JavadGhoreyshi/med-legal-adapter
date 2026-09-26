@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Environment & secrets
+.env
+*.token
+
+# Model checkpoints & large artifacts (اینها روی هاگینگ‌فیس ذخیره می‌شوند، نه گیت‌هاب)
+*.ckpt
+*.bin
+*.safetensors
+*.pt
+*.pth
+checkpoint-*/
+med_legal_*_checkpoint/
+
+# Data files (پیکره‌های حجیم نباید داخل گیت‌هاب باشند)
+*.txt
+!requirements.txt
+*.csv
+*.json
+!config.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.virtual_documents/

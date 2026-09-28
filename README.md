@@ -18,8 +18,10 @@ domain-specific tokens to the vocabulary and training in phases
 - `utils.py`: shared helper functions
 - `scripts/train_phase1_warmup.py`: Phase 1 (archived, already done)
 - `scripts/train_phase2_unfreeze.py`: Phase 2
-
+- 
 ## How to Run on Kaggle
+
+### Setup (same for every phase)
 
 1. Enable Internet and GPU in the notebook settings.
 2. Add your Hugging Face write token as a Kaggle Secret named `HF_TOKEN`.
@@ -29,7 +31,15 @@ domain-specific tokens to the vocabulary and training in phases
 !git clone https://github.com/JavadGhoreyshi/med-legal-adapter.git
 %cd med-legal-adapter
 !pip install -r requirements.txt --quiet
+```
+
+### Run a phase
+
+```python
+# Phase 2
 !PYTHONPATH=. python scripts/train_phase2_unfreeze.py
+
+# Phase 3 (add here when ready)
 ```
 
 ## Where Things Are Stored

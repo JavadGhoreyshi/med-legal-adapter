@@ -91,6 +91,6 @@ trainer.train()
 
 check("[AFTER TRAINING]")
 
-model.push_to_hub(CONFIG["model_repo"], private=True)
+model.push_to_hub(CONFIG["model_repo"], private=False)
 tokenizer.push_to_hub(CONFIG["model_repo"], private=True)
 print("[SUCCESS] Pushed to", CONFIG["model_repo"])

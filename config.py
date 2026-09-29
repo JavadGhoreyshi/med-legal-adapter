@@ -1,8 +1,8 @@
 CONFIG = {
     "hf_username": "shokol1011",
-    "model_repo": "shokol1011/med-legal-xlm-roberta-v2",
+    "model_repo": "shokol1011/med-legal-xlm-roberta-v3",
     "legacy_repo": "shokol1011/med-legal-xlm-roberta",
-    "dataset_repo": "shokol1011/med-legal-tokenized-dataset",
+    "dataset_repo": "shokol1011/med-legal-tokenized-dataset-v3",
     "base_model": "xlm-roberta-base",
     "max_length": 128,
     "mlm_probability": 0.15,

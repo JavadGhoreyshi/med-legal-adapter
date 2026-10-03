@@ -28,7 +28,7 @@ import re
 login(token=UserSecretsClient().get_secret("HF_TOKEN"))
 
 # --- ۱. پیدا کردن فایل‌ها ---
-CORPUS_PATH = find_file("bilingual_med_l egal_corpus.txt")
+CORPUS_PATH = find_file("bilingual_med_legal_corpus.txt")
 TOKENIZER_JSON_PATH = find_file("med_legal_tokenizer.json")
 assert CORPUS_PATH is not None, "فایل پیکره پیدا نشد!"
 assert TOKENIZER_JSON_PATH is not None, "فایل توکنایزر تخصصی پیدا نشد!"

@@ -20,6 +20,10 @@ from huggingface_hub import login
 from kaggle_secrets import UserSecretsClient
 from config import CONFIG
 from utils import find_file
+from hazm import stopwords_list
+import urllib.request
+from collections import Counter
+import re
 
 login(token=UserSecretsClient().get_secret("HF_TOKEN"))
 
@@ -51,7 +55,79 @@ for token_str, token_id in raw_tok.get_vocab().items():
     if not is_already_known(real_text, base_tokenizer):
         tokens_to_add.append(real_text)
 
-selected_new_tokens = list(set(tokens_to_add))[:2000]
+# ============================================================
+# فیلتر نهایی: حذف کلمات رایج با ترکیب stopword list + مقایسه‌ی فراوانی
+# ============================================================
+print("در حال بارگذاری لیست‌های کلمات رایج فارسی...")
+
+# --- ۱. لیست stopword (حروف اضافه، ضمایر) ---
+stopwords_hazm = set(stopwords_list())
+url = "https://raw.githubusercontent.com/kharazi/persian-stopwords/master/persian"
+urllib.request.urlretrieve(url, "persian_stopwords_github.txt")
+with open("persian_stopwords_github.txt", "r", encoding="utf-8") as f:
+    stopwords_github = set(line.strip() for line in f if line.strip())
+PERSIAN_STOPWORDS = stopwords_hazm | stopwords_github
+print(f"[OK] {len(PERSIAN_STOPWORDS)} stopword فارسی بارگذاری شد.")
+
+# --- ۲. فراوانی کلمات در پیکره‌ی تخصصی خودمان ---
+def word_counts(text_lines):
+    counter = Counter()
+    for line in text_lines:
+        words = re.findall(r"[\w\u0600-\u06FF]+", line.lower())
+        counter.update(words)
+    return counter
+
+with open(CORPUS_PATH, "r", encoding="utf-8") as f:
+    domain_lines = f.readlines()
+domain_counts = word_counts(domain_lines)
+domain_total = sum(domain_counts.values())
+print(f"[OK] {domain_total:,} کلمه در پیکره‌ی تخصصی شمارش شد.")
+
+# --- ۳. فراوانی کلمات در یک پیکره‌ی عمومی فارسی (ویکی‌پدیا، با استریم) ---
+from datasets import load_dataset
+
+print("در حال دانلود نمونه‌ای از ویکی‌پدیای فارسی برای مقایسه...")
+wiki = load_dataset("wikimedia/wikipedia", "20231101.fa", split="train", streaming=True)
+general_lines = []
+for i, row in enumerate(wiki):
+    general_lines.append(row["text"])
+    if i >= 3000:   # فقط ۳۰۰۰ مقاله، برای سرعت کافی است
+        break
+
+general_counts = word_counts(general_lines)
+general_total = sum(general_counts.values())
+print(f"[OK] {general_total:,} کلمه در پیکره‌ی عمومی شمارش شد.")
+
+# --- ۴. فیلتر نهایی بر اساس نسبت فراوانی ---
+RATIO_THRESHOLD = 5.0   # کلمه باید حداقل ۵ برابر پرتکرارتر از زبان عمومی باشد
+
+def is_domain_specific(word, domain_counts, domain_total, general_counts, general_total, ratio_threshold):
+    domain_freq = domain_counts.get(word, 0) / domain_total
+    general_freq = general_counts.get(word, 0) / general_total
+    if general_freq == 0:
+        return domain_freq > 0   # کلمه‌ای که اصلاً در زبان عمومی نیست، احتمالاً تخصصی است
+    return (domain_freq / general_freq) >= ratio_threshold
+
+filtered_tokens = []
+removed_as_stopword = 0
+removed_as_common = 0
+
+for token in tokens_to_add:
+    if token in PERSIAN_STOPWORDS:
+        removed_as_stopword += 1
+        continue
+    if not is_domain_specific(token, domain_counts, domain_total, general_counts, general_total, RATIO_THRESHOLD):
+        removed_as_common += 1
+        continue
+    filtered_tokens.append(token)
+
+print(f"[AUDIT] حذف‌شده به‌عنوان stopword: {removed_as_stopword}")
+print(f"[AUDIT] حذف‌شده به‌عنوان کلمه‌ی عمومی (نسبت فراوانی پایین): {removed_as_common}")
+print(f"[AUDIT] باقی‌مانده پس از فیلتر: {len(filtered_tokens)}")
+
+selected_new_tokens = list(dict.fromkeys(filtered_tokens))[:2000]
+print(f"[OK] {len(selected_new_tokens)} توکن تخصصی نهایی انتخاب شد.")
+print("Sample:", selected_new_tokens[:30])
 print(f"[OK] {len(selected_new_tokens)} real, truly-new domain tokens extracted.")
 print("Sample:", selected_new_tokens[:15])
 

@@ -28,7 +28,7 @@ import re
 login(token=UserSecretsClient().get_secret("HF_TOKEN"))
 
 # --- ۱. پیدا کردن فایل‌ها ---
-CORPUS_PATH = find_file("bilingual_med_legal_corpus.txt")
+CORPUS_PATH = find_file("bilingual_med_l egal_corpus.txt")
 TOKENIZER_JSON_PATH = find_file("med_legal_tokenizer.json")
 assert CORPUS_PATH is not None, "فایل پیکره پیدا نشد!"
 assert TOKENIZER_JSON_PATH is not None, "فایل توکنایزر تخصصی پیدا نشد!"
@@ -138,7 +138,7 @@ print(f"[OK] Added {num_added} new tokens to tokenizer. Vocab size: {len(tokeniz
 
 model = AutoModelForMaskedLM.from_pretrained(CONFIG["base_model"])
 OLD_VOCAB = model.get_input_embeddings().weight.shape[0]
-model.resize_token_embeddings(len(tokenizer))
+model.resize_token_embeddings(len(tokenizer) , mean_reasize = False)
 print(f"[OK] Embedding rows: {OLD_VOCAB} -> {len(tokenizer)}")
 
 # --- ۴. تست سلامت قبل از آموزش ---

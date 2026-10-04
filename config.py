@@ -12,6 +12,6 @@ CONFIG = {
     # فاز فعلی که روی هاگینگ‌فیس ذخیره شده
     "current_phase": "phase1_warmup",
     "num_layers_to_unfreeze_phase2": 2,
-    "learning_rate_phase1": 1e-4,
+    "learning_rate_phase1": 1e-5,
     "learning_rate_phase2": 2e-5,
 }

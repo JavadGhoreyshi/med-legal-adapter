@@ -1,14 +1,17 @@
 """
-Phase 1 v3: Fixed vocabulary extraction + safe embedding warm-up.
+Phase 1 v4: Fixed vocabulary extraction + domain-specificity filter + safe embedding warm-up.
 
-Root cause fixed here: the custom tokenizer used a ByteLevel pre-tokenizer,
-so its raw vocab keys are byte-encoded garbage (e.g. "Ø¯Ø±Ø®ÙĪØ§Ø³Øª"),
-not real UTF-8 text. Those garbage strings were being added to xlm-roberta's
-vocabulary, poisoning the shared input/output embedding matrix and making
-eval_loss jump from ~3.85 (healthy) to ~21 (broken).
-
-This script decodes each custom token back to real text before comparing it
-against the base vocabulary and adding it.
+Root causes fixed so far:
+1. ByteLevel decoding: custom tokenizer vocab keys were byte-encoded garbage;
+   now decoded back to real UTF-8 text before comparison.
+2. SentencePiece prefix mismatch: words already known to the base tokenizer
+   (with or without the leading "▁") are excluded via is_already_known().
+3. Colloquial/common-word pollution: a stopword list + domain-vs-general
+   frequency ratio filter removes everyday words that aren't truly domain-specific.
+4. Embedding collapse: HF's mean-resizing (multivariate normal init) was
+   producing near-identical vectors for all new rows (std=0.023), which
+   corrupted softmax for the whole vocabulary via the tied lm_head.
+   Disabled via mean_resizing=False.
 """
 import os
 import torch
@@ -27,22 +30,23 @@ import re
 
 login(token=UserSecretsClient().get_secret("HF_TOKEN"))
 
-# --- ۱. پیدا کردن فایل‌ها ---
+# --- 1. Locate input files ---
 CORPUS_PATH = find_file("bilingual_med_legal_corpus.txt")
 TOKENIZER_JSON_PATH = find_file("med_legal_tokenizer.json")
-assert CORPUS_PATH is not None, "فایل پیکره پیدا نشد!"
-assert TOKENIZER_JSON_PATH is not None, "فایل توکنایزر تخصصی پیدا نشد!"
+assert CORPUS_PATH is not None, "Corpus file not found!"
+assert TOKENIZER_JSON_PATH is not None, "Custom tokenizer file not found!"
 print(f"[OK] Corpus: {CORPUS_PATH}")
 print(f"[OK] Custom tokenizer: {TOKENIZER_JSON_PATH}")
-# --- ۲. استخراج صحیح توکن‌های تخصصی ---
+
+# --- 2. Extract real, non-duplicate domain tokens ---
 base_tokenizer = AutoTokenizer.from_pretrained(CONFIG["base_model"])
 
 raw_tok = Tokenizer.from_file(TOKENIZER_JSON_PATH)
 raw_tok.decoder = decoders.ByteLevel()
 
 def is_already_known(word, tok):
-    # چک می‌کند آیا این کلمه از قبل به‌صورت یک توکن واحد در توکنایزر پایه وجود دارد
-    # هم به‌شکل وسط کلمه، هم به‌شکل شروع کلمه (با فاصله، که SentencePiece آن را با ▁ ذخیره می‌کند)
+    # Checks whether this word is already a single token in the base tokenizer,
+    # both as a mid-word piece and as a word-start piece (SentencePiece's "▁" prefix)
     ids_mid = tok(word, add_special_tokens=False)["input_ids"]
     ids_start = tok(" " + word, add_special_tokens=False)["input_ids"]
     return len(ids_mid) == 1 or len(ids_start) == 1
@@ -56,20 +60,20 @@ for token_str, token_id in raw_tok.get_vocab().items():
         tokens_to_add.append(real_text)
 
 # ============================================================
-# فیلتر نهایی: حذف کلمات رایج با ترکیب stopword list + مقایسه‌ی فراوانی
+# Final filter: remove common words via stopword list + frequency ratio
 # ============================================================
-print("در حال بارگذاری لیست‌های کلمات رایج فارسی...")
+print("Loading Persian common-word lists...")
 
-# --- ۱. لیست stopword (حروف اضافه، ضمایر) ---
+# --- Source 1: stopword lists (prepositions, pronouns) ---
 stopwords_hazm = set(stopwords_list())
 url = "https://raw.githubusercontent.com/kharazi/persian-stopwords/master/persian"
 urllib.request.urlretrieve(url, "persian_stopwords_github.txt")
 with open("persian_stopwords_github.txt", "r", encoding="utf-8") as f:
     stopwords_github = set(line.strip() for line in f if line.strip())
 PERSIAN_STOPWORDS = stopwords_hazm | stopwords_github
-print(f"[OK] {len(PERSIAN_STOPWORDS)} stopword فارسی بارگذاری شد.")
+print(f"[OK] Loaded {len(PERSIAN_STOPWORDS)} Persian stopwords.")
 
-# --- ۲. فراوانی کلمات در پیکره‌ی تخصصی خودمان ---
+# --- Source 2: word frequency in our own domain corpus ---
 def word_counts(text_lines):
     counter = Counter()
     for line in text_lines:
@@ -81,31 +85,31 @@ with open(CORPUS_PATH, "r", encoding="utf-8") as f:
     domain_lines = f.readlines()
 domain_counts = word_counts(domain_lines)
 domain_total = sum(domain_counts.values())
-print(f"[OK] {domain_total:,} کلمه در پیکره‌ی تخصصی شمارش شد.")
+print(f"[OK] Counted {domain_total:,} words in the domain corpus.")
 
-# --- ۳. فراوانی کلمات در یک پیکره‌ی عمومی فارسی (ویکی‌پدیا، با استریم) ---
+# --- Source 3: word frequency in a general Persian corpus (Wikipedia, streamed) ---
 from datasets import load_dataset
 
-print("در حال دانلود نمونه‌ای از ویکی‌پدیای فارسی برای مقایسه...")
+print("Downloading a sample of Persian Wikipedia for comparison...")
 wiki = load_dataset("wikimedia/wikipedia", "20231101.fa", split="train", streaming=True)
 general_lines = []
 for i, row in enumerate(wiki):
     general_lines.append(row["text"])
-    if i >= 3000:   # فقط ۳۰۰۰ مقاله، برای سرعت کافی است
+    if i >= 3000:   # 3000 articles is enough for this comparison
         break
 
 general_counts = word_counts(general_lines)
 general_total = sum(general_counts.values())
-print(f"[OK] {general_total:,} کلمه در پیکره‌ی عمومی شمارش شد.")
+print(f"[OK] Counted {general_total:,} words in the general corpus.")
 
-# --- ۴. فیلتر نهایی بر اساس نسبت فراوانی ---
-RATIO_THRESHOLD = 5.0   # کلمه باید حداقل ۵ برابر پرتکرارتر از زبان عمومی باشد
+# --- Filter based on domain-vs-general frequency ratio ---
+RATIO_THRESHOLD = 5.0   # word must be at least 5x more frequent in-domain than in general Persian
 
 def is_domain_specific(word, domain_counts, domain_total, general_counts, general_total, ratio_threshold):
     domain_freq = domain_counts.get(word, 0) / domain_total
     general_freq = general_counts.get(word, 0) / general_total
     if general_freq == 0:
-        return domain_freq > 0   # کلمه‌ای که اصلاً در زبان عمومی نیست، احتمالاً تخصصی است
+        return domain_freq > 0   # word absent from general corpus -> likely domain-specific
     return (domain_freq / general_freq) >= ratio_threshold
 
 filtered_tokens = []
@@ -121,27 +125,25 @@ for token in tokens_to_add:
         continue
     filtered_tokens.append(token)
 
-print(f"[AUDIT] حذف‌شده به‌عنوان stopword: {removed_as_stopword}")
-print(f"[AUDIT] حذف‌شده به‌عنوان کلمه‌ی عمومی (نسبت فراوانی پایین): {removed_as_common}")
-print(f"[AUDIT] باقی‌مانده پس از فیلتر: {len(filtered_tokens)}")
+print(f"[AUDIT] Removed as stopword: {removed_as_stopword}")
+print(f"[AUDIT] Removed as common word (low frequency ratio): {removed_as_common}")
+print(f"[AUDIT] Remaining after filter: {len(filtered_tokens)}")
 
 selected_new_tokens = list(dict.fromkeys(filtered_tokens))[:2000]
-print(f"[OK] {len(selected_new_tokens)} توکن تخصصی نهایی انتخاب شد.")
+print(f"[OK] {len(selected_new_tokens)} final domain-specific tokens selected.")
 print("Sample:", selected_new_tokens[:30])
-print(f"[OK] {len(selected_new_tokens)} real, truly-new domain tokens extracted.")
-print("Sample:", selected_new_tokens[:15])
 
-# --- ۳. ساخت توکنایزر و مدل جدید از پایه ---
+# --- 3. Build a fresh tokenizer and model from the base ---
 tokenizer = AutoTokenizer.from_pretrained(CONFIG["base_model"])
 num_added = tokenizer.add_tokens(selected_new_tokens)
 print(f"[OK] Added {num_added} new tokens to tokenizer. Vocab size: {len(tokenizer)}")
 
 model = AutoModelForMaskedLM.from_pretrained(CONFIG["base_model"])
 OLD_VOCAB = model.get_input_embeddings().weight.shape[0]
-model.resize_token_embeddings(len(tokenizer) , mean_resizing=False)
+model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
 print(f"[OK] Embedding rows: {OLD_VOCAB} -> {len(tokenizer)}")
 
-# --- ۴. تست سلامت قبل از آموزش ---
+# --- 4. Sanity check before training ---
 def check(tag):
     model.eval()
     text = "The capital of France is <mask>."
@@ -157,7 +159,7 @@ def check(tag):
 
 check("[BEFORE TRAINING]")
 
-# --- ۵. فریز کردن همه‌چیز، آزاد فقط ردیف‌های جدید embedding ---
+# --- 5. Freeze everything, unfreeze only new embedding rows ---
 for p in model.parameters():
     p.requires_grad = False
 emb_weight = model.get_input_embeddings().weight
@@ -172,7 +174,7 @@ emb_weight.register_hook(zero_old_rows)
 trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"[AUDIT] Trainable tensor size: {trainable:,} (only new rows actually update)")
 
-# --- ۶. ساخت دیتاست از نو، با توکنایزر جدید ---
+# --- 6. Build the dataset fresh, with the new tokenizer ---
 with open(CORPUS_PATH, "r", encoding="utf-8") as f:
     corpus_lines = [line.strip() for line in f if len(line.strip()) > 30][:25000]
 raw_dataset = Dataset.from_dict({"text": corpus_lines})
@@ -186,12 +188,12 @@ tokenized_dataset = raw_dataset.map(
 )
 print(f"[OK] Tokenized dataset ready: {len(tokenized_dataset)} samples.")
 
-# --- ۷. baseline قبل از آموزش (روی ۵۱۲ نمونه) ---
+# --- 7. Baseline before training (on 512 samples) ---
 data_collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer, mlm=True, mlm_probability=CONFIG["mlm_probability"])
 
 training_args = TrainingArguments(
-    output_dir="/kaggle/working/phase1_v3_checkpoint",
+    output_dir="/kaggle/working/phase1_v4_checkpoint",
     num_train_epochs=3,
     per_device_train_batch_size=CONFIG["batch_size"],
     gradient_accumulation_steps=CONFIG["grad_accum_steps"],
@@ -209,12 +211,12 @@ trainer = Trainer(model=model, args=training_args,
 
 print("[BASELINE]", trainer.evaluate(eval_dataset=tokenized_dataset.select(range(512))))
 
-# --- ۸. آموزش ---
+# --- 8. Train ---
 trainer.train()
 
 check("[AFTER TRAINING]")
 
-# --- ۹. آپلود مدل، توکنایزر و دیتاست جدید ---
+# --- 9. Push model, tokenizer, and dataset ---
 model.push_to_hub(CONFIG["model_repo"], private=True)
 tokenizer.push_to_hub(CONFIG["model_repo"], private=True)
 tokenized_dataset.push_to_hub(CONFIG["dataset_repo"], private=True)

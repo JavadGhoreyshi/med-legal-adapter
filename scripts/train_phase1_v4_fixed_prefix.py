@@ -142,6 +142,12 @@ model = AutoModelForMaskedLM.from_pretrained(CONFIG["base_model"])
 OLD_VOCAB = model.get_input_embeddings().weight.shape[0]
 model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
 print(f"[OK] Embedding rows: {OLD_VOCAB} -> {len(tokenizer)}")
+# --- Sanity check: verify new rows are NOT a collapsed/near-identical cluster ---
+emb_check = model.get_input_embeddings().weight
+old_norms = emb_check[:OLD_VOCAB].norm(dim=1)
+new_norms = emb_check[OLD_VOCAB:].norm(dim=1)
+print(f"[NORM CHECK] old rows: mean={old_norms.mean().item():.3f}, std={old_norms.std().item():.3f}")
+print(f"[NORM CHECK] new rows: mean={new_norms.mean().item():.3f}, std={new_norms.std().item():.3f}")
 
 # --- 4. Sanity check before training ---
 def check(tag):

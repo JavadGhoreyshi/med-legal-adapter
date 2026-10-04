@@ -214,19 +214,22 @@ training_args = TrainingArguments(
 from transformers import TrainerCallback
 
 class EmbeddingNormWatcher(TrainerCallback):
-    def on_log(self, args, state, control, **kwargs):
-        with torch.no_grad():
-            new_norms = model.get_input_embeddings().weight[OLD_VOCAB:].norm(dim=1)
-            print(f"  [WATCH] new-row mean norm = {new_norms.mean().item():.4f}, max = {new_norms.max().item():.4f}")
+    def on_before_optimizer_step(self, args, control, **kwargs):
+        model = kwargs["model"]
         grad = model.get_input_embeddings().weight.grad
         if grad is None:
-            print("  [GRAD CHECK] grad is None!")
+            print("  [GRAD CHECK] grad is None at step boundary!")
         else:
             print(f"  [GRAD CHECK] grad abs mean (new rows) = {grad[OLD_VOCAB:].abs().mean().item():.8f}")
             print(f"  [GRAD CHECK] grad abs mean (old rows) = {grad[:OLD_VOCAB].abs().mean().item():.8f}")
 
+    def on_log(self, args, state, control, **kwargs):
+        model = kwargs["model"]
+        with torch.no_grad():
+            new_norms = model.get_input_embeddings().weight[OLD_VOCAB:].norm(dim=1)
+            print(f"  [WATCH] new-row mean norm = {new_norms.mean().item():.4f}, max = {new_norms.max().item():.4f}")
 
-            
+
 trainer = Trainer(model=model, args=training_args,
                   train_dataset=tokenized_dataset, data_collator=data_collator , callbacks=[EmbeddingNormWatcher()])
 

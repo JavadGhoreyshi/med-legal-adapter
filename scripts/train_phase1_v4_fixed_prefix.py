@@ -223,11 +223,23 @@ class EmbeddingNormWatcher(TrainerCallback):
             new_norms = model.get_input_embeddings().weight[OLD_VOCAB:].norm(dim=1)
             print(f"  [WATCH] new-row mean norm = {new_norms.mean().item():.4f}, max = {new_norms.max().item():.4f}")
 
-            
+
 trainer = Trainer(model=model, args=training_args,
                   train_dataset=tokenized_dataset, data_collator=data_collator , callbacks=[EmbeddingNormWatcher()])
 
 print("[BASELINE]", trainer.evaluate(eval_dataset=tokenized_dataset.select(range(512))))
+
+
+
+import random
+random.seed(42)
+random_idxs = random.sample(range(len(tokenized_dataset)), 512)
+random_subset = tokenized_dataset.select(random_idxs)
+print("[RANDOM EVAL]", trainer.evaluate(eval_dataset=random_subset))
+
+sample_batch = data_collator([tokenized_dataset[i] for i in random_idxs[:4]])
+decoded = tokenizer.decode(sample_batch["input_ids"][0], skip_special_tokens=False)
+print("[SAMPLE BATCH TEXT]", decoded[:500])
 
 # --- 8. Train ---
 trainer.train()

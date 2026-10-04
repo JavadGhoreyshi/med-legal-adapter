@@ -172,9 +172,6 @@ emb_weight = model.get_input_embeddings().weight
 emb_weight.requires_grad = True
 
 def zero_old_rows(grad):
-    new_grad_mean = grad[OLD_VOCAB:].abs().mean().item()
-    old_grad_mean = grad[:OLD_VOCAB].abs().mean().item()
-    print(f"    [HOOK FIRED] new rows grad mean = {new_grad_mean:.8f} | old rows grad mean (before zeroing) = {old_grad_mean:.8f}")
     grad = grad.clone()
     grad[:OLD_VOCAB] = 0
     return grad
@@ -208,7 +205,7 @@ training_args = TrainingArguments(
     gradient_accumulation_steps=CONFIG["grad_accum_steps"],
     learning_rate=CONFIG["learning_rate_phase1"],
     weight_decay=0.0,
-    logging_steps=10,
+    logging_steps=25,
     save_strategy="no",
     fp16=False,
     dataloader_num_workers=2,
@@ -230,16 +227,6 @@ trainer = Trainer(model=model, args=training_args,
 print("[BASELINE]", trainer.evaluate(eval_dataset=tokenized_dataset.select(range(512))))
 
 
-
-import random
-random.seed(42)
-random_idxs = random.sample(range(len(tokenized_dataset)), 512)
-random_subset = tokenized_dataset.select(random_idxs)
-print("[RANDOM EVAL]", trainer.evaluate(eval_dataset=random_subset))
-
-sample_batch = data_collator([tokenized_dataset[i] for i in random_idxs[:4]])
-decoded = tokenizer.decode(sample_batch["input_ids"][0], skip_special_tokens=False)
-print("[SAMPLE BATCH TEXT]", decoded[:500])
 
 # --- 8. Train ---
 trainer.train()

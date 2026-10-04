@@ -207,13 +207,20 @@ training_args = TrainingArguments(
     weight_decay=0.0,
     logging_steps=10,
     save_strategy="no",
-    fp16=torch.cuda.is_available(),
+    fp16=False,
     dataloader_num_workers=2,
     report_to="none",
 )
+from transformers import TrainerCallback
+
+class EmbeddingNormWatcher(TrainerCallback):
+    def on_log(self, args, state, control, **kwargs):
+        with torch.no_grad():
+            new_norms = model.get_input_embeddings().weight[OLD_VOCAB:].norm(dim=1)
+            print(f"  [WATCH] new-row mean norm = {new_norms.mean().item():.4f}, max = {new_norms.max().item():.4f}")
 
 trainer = Trainer(model=model, args=training_args,
-                  train_dataset=tokenized_dataset, data_collator=data_collator)
+                  train_dataset=tokenized_dataset, data_collator=data_collator , callbacks=[EmbeddingNormWatcher()])
 
 print("[BASELINE]", trainer.evaluate(eval_dataset=tokenized_dataset.select(range(512))))
 

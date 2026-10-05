@@ -3,3 +3,4 @@ datasets
 torch
 huggingface_hub
 accelerate
+hazm

@@ -10,12 +10,14 @@ from collections import Counter
 import re
 from utils import find_file
 from config import CONFIG
-
+def is_digit_like(word):
+    # Matches Western digits (0-9), Persian/Arabic-Indic digits (٠-٩), and Arabic digits (۰-۹)
+    return bool(re.fullmatch(r"[0-9\u06F0-\u06F9\u0660-\u0669]+", word))
 CORPUS_PATH = find_file("bilingual_med_legal_corpus.txt")
 TOKENIZER_JSON_PATH = find_file("med_legal_tokenizer.json")
 assert CORPUS_PATH is not None, "Corpus file not found!"
 assert TOKENIZER_JSON_PATH is not None, "Custom tokenizer file not found!"
-
+  
 base_tokenizer = AutoTokenizer.from_pretrained(CONFIG["base_model"])
 raw_tok = Tokenizer.from_file(TOKENIZER_JSON_PATH)
 raw_tok.decoder = decoders.ByteLevel()
@@ -77,7 +79,12 @@ def is_domain_specific(word):
 filtered_tokens = []
 removed_stopword = 0
 removed_common = 0
+removed_digit = 0
+
 for token in tokens_to_add:
+    if is_digit_like(token):
+        removed_digit += 1
+        continue
     if token in PERSIAN_STOPWORDS:
         removed_stopword += 1
         continue
@@ -86,18 +93,17 @@ for token in tokens_to_add:
         continue
     filtered_tokens.append(token)
 
-selected = list(dict.fromkeys(filtered_tokens))[:2000]
-
+print(f"[STEP B] Removed as digit-like: {removed_digit}")
 print(f"[STEP B] Removed as stopword: {removed_stopword}")
 print(f"[STEP B] Removed as common (low domain ratio): {removed_common}")
-print(f"[STEP B] Final selected tokens: {len(selected)}")
+
 
 print("\n--- Sample of final tokens (first 40) ---")
 for t in selected[:40]:
     print(" ", t)
 
 # --- Manual quality signal: how many look like real domain terms vs. noise ---
-digit_like = sum(1 for t in selected if t.isdigit())
+digit_like = sum(1 for t in selected if is_digit_like(t))
 latin_tokens = sum(1 for t in selected if re.fullmatch(r"[A-Za-z]+", t))
 persian_tokens = sum(1 for t in selected if re.fullmatch(r"[\u0600-\u06FF]+", t))
 print(f"\n--- Composition of final token list ---")

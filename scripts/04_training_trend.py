@@ -20,11 +20,14 @@ from utils import find_file
 from config import CONFIG
 from huggingface_hub import login
 from kaggle_secrets import UserSecretsClient
-
+def is_digit_like(word):
+    # Matches Western digits (0-9), Persian/Arabic-Indic digits (٠-٩), and Arabic digits (۰-۹)
+    return bool(re.fullmatch(r"[0-9\u06F0-\u06F9\u0660-\u0669]+", word))
 login(token=UserSecretsClient().get_secret("HF_TOKEN"))
 
 CORPUS_PATH = find_file("bilingual_med_legal_corpus.txt")
 TOKENIZER_JSON_PATH = find_file("med_legal_tokenizer.json")
+
 
 base_tokenizer = AutoTokenizer.from_pretrained(CONFIG["base_model"])
 raw_tok = Tokenizer.from_file(TOKENIZER_JSON_PATH)
@@ -70,7 +73,8 @@ def is_domain_specific(word):
     gf = general_counts.get(word, 0) / general_total
     return (df / gf >= 5.0) if gf > 0 else df > 0
 
-filtered = [t for t in tokens_to_add if t not in PERSIAN_STOPWORDS and is_domain_specific(t)]
+filtered = [t for t in tokens_to_add
+            if not is_digit_like(t) and t not in PERSIAN_STOPWORDS and is_domain_specific(t)]
 selected_new_tokens = list(dict.fromkeys(filtered))[:2000]
 
 tokenizer = AutoTokenizer.from_pretrained(CONFIG["base_model"])

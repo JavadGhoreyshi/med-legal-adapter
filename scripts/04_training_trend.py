@@ -82,7 +82,12 @@ tokenizer.add_tokens(selected_new_tokens)
 model = AutoModelForMaskedLM.from_pretrained(CONFIG["base_model"])
 OLD_VOCAB = model.get_input_embeddings().weight.shape[0]
 model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
-
+# Disable dropout everywhere — with almost the entire model frozen,
+# dropout noise in frozen layers only hurts representation quality
+# without providing any regularization benefit.
+for module in model.modules():
+    if isinstance(module, torch.nn.Dropout):
+        module.p = 0.0
 for p in model.parameters():
     p.requires_grad = False
 emb_weight = model.get_input_embeddings().weight

@@ -121,7 +121,7 @@ class LossCollector(TrainerCallback):
 
 training_args = TrainingArguments(
     output_dir="/kaggle/working/trend_check",
-    max_steps=300,                      # fixed step budget for this check, not full 3 epochs
+    max_steps=30,                      # fixed step budget for this check, not full 3 epochs
     per_device_train_batch_size=CONFIG["batch_size"],
     gradient_accumulation_steps=CONFIG["grad_accum_steps"],
     learning_rate=CONFIG["learning_rate_phase1"],

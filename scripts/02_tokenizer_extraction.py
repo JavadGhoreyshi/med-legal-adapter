@@ -92,7 +92,7 @@ for token in tokens_to_add:
         removed_common += 1
         continue
     filtered_tokens.append(token)
-
+selected = list(dict.fromkeys(filtered_tokens))[:2000]
 print(f"[STEP B] Removed as digit-like: {removed_digit}")
 print(f"[STEP B] Removed as stopword: {removed_stopword}")
 print(f"[STEP B] Removed as common (low domain ratio): {removed_common}")

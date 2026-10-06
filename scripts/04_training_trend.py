@@ -121,12 +121,12 @@ class LossCollector(TrainerCallback):
 
 training_args = TrainingArguments(
     output_dir="/kaggle/working/trend_check",
-    max_steps=30,                      # fixed step budget for this check, not full 3 epochs
+    max_steps=30,
     per_device_train_batch_size=CONFIG["batch_size"],
-    gradient_accumulation_steps=CONFIG["grad_accum_steps"],
+    gradient_accumulation_steps=1,   # موقتاً از 4 به 1 برای این تست تشخیصی
     learning_rate=CONFIG["learning_rate_phase1"],
     weight_decay=0.0,
-    logging_steps=10,
+    logging_steps=5,                 # چون هر قدم حالا سریع‌تر لاگ می‌شود
     save_strategy="no",
     fp16=False,
     dataloader_num_workers=2,

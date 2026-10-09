@@ -1,9 +1,9 @@
 CONFIG = {
     "hf_username": "shokol1011",
-    "model_repo": "shokol1011/med-legal-xlm-roberta-v4",
-    "legacy_repo": "shokol1011/med-legal-xlm-roberta",
-    "broken_v3_repo": "shokol1011/med-legal-xlm-roberta-v3",
-    "dataset_repo": "shokol1011/med-legal-tokenized-dataset-v4",
+    "model_repo": "JavadGhoreyshi/med-legal-xlm-roberta-v4",
+    "legacy_repo": "JavadGhoreyshi/med-legal-xlm-roberta",
+    "broken_v3_repo": "JavadGhoreyshi/med-legal-xlm-roberta-v3",
+    "dataset_repo": "JavadGhoreyshi/med-legal-tokenized-dataset-v4",
     "base_model": "xlm-roberta-base",
     "max_length": 128,
     "mlm_probability": 0.15,

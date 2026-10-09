@@ -1,5 +1,5 @@
 CONFIG = {
-    "hf_username": "shokol1011",
+    "hf_username": "JavadGhoreyshi",
     "model_repo": "JavadGhoreyshi/med-legal-xlm-roberta-v4",
     "legacy_repo": "JavadGhoreyshi/med-legal-xlm-roberta",
     "broken_v3_repo": "JavadGhoreyshi/med-legal-xlm-roberta-v3",

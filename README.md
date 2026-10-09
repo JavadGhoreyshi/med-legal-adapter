@@ -8,7 +8,7 @@ domain-specific tokens to the vocabulary and training in phases
 
 - [x] Phase 0: Extract domain tokens from the medical + legal corpus
 - [x] Phase 1: Embedding warm-up (backbone frozen, only embeddings trainable)
-      Saved at: `shokol1011/med-legal-xlm-roberta`
+      Saved at: `JavadGhoreyshi/med-legal-xlm-roberta`
 - [ ] Phase 2: Unfreeze the last 2 transformer layers with a lower learning rate
 - [ ] Phase 3: Evaluation and/or fine-tuning on the final task
 
@@ -45,6 +45,6 @@ domain-specific tokens to the vocabulary and training in phases
 ## Where Things Are Stored
 
 - Code: this GitHub repository
-- Models and tokenizer: Hugging Face Hub (`shokol1011/med-legal-xlm-roberta`)
-- Tokenized dataset: Hugging Face Hub (`shokol1011/med-legal-tokenized-dataset`)
+- Models and tokenizer: Hugging Face Hub (`JavadGhoreyshi/med-legal-xlm-roberta`)
+- Tokenized dataset: Hugging Face Hub (`JavadGhoreyshi/med-legal-tokenized-dataset`)
 - Training runs: Kaggle (GPU)

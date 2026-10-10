@@ -123,11 +123,13 @@ def select_domain_tokens(tokenizer_json_path, base_tokenizer, train_lines, cfg, 
     stats = Counter()
     seen = set()
     candidates = []
-
+    # How often does each candidate appear as a substring inside the raw train text?
+    # (add_tokens matches substrings, so a short token can cut through longer words)
+    train_text = "\n".join(train_lines)
     for token_str, token_id in raw_tok.get_vocab().items():
         word = raw_tok.decode([token_id]).strip()
 
-        if len(word.replace("\u200c", "")) < 3:
+        if len(word.replace("\u200c", "")) < 4:
             stats["too_short"] += 1
             continue
         if word in seen:
@@ -141,6 +143,12 @@ def select_domain_tokens(tokenizer_json_path, base_tokenizer, train_lines, cfg, 
         count = train_counts.get(word, 0)
         if count < cfg["min_train_count"]:
             stats["rare_in_train"] += 1
+            continue
+         # If the word occurs far more often INSIDE longer words than as a standalone word,
+        # adding it as a token would shred those longer words.
+        substring_count = train_text.count(word)
+        if substring_count > 1.5 * count:
+            stats["cuts_longer_words"] += 1
             continue
         if word in stopwords:
             stats["stopword"] += 1

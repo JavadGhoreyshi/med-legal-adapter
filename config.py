@@ -17,7 +17,7 @@ CONFIG = {
     "n_val":2000,
     "seed":42,
     "num_new_tokens":2000 , 
-    "main_train_count":5,
+    "min_train_count":5,
     "ratio_threshold":5.0,
     "init_method":"subtoken_mean",
     "max_steps_trend" : 300,

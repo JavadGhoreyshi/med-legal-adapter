@@ -12,6 +12,14 @@ CONFIG = {
     # فاز فعلی که روی هاگینگ‌فیس ذخیره شده
     "current_phase": "phase1_warmup",
     "num_layers_to_unfreeze_phase2": 2,
-    "learning_rate_phase1": 1e-5,
+    "learning_rate_phase1": 5e-4,
+    "n_train":25000,
+    "n_val":2000,
+    "seed":42,
+    "num_new_tokens":2000 , 
+    "main_train_count":5,
+    "ratio_threshold":5.0,
+    "init_method":"subtoken_mean",
+    "max_steps_trend" : 300,
     "learning_rate_phase2": 2e-5,
 }

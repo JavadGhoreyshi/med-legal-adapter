@@ -12,7 +12,11 @@ print(f"[OK] Corpus: {CORPUS_PATH}")
 
 with open(CORPUS_PATH, "r", encoding="utf-8") as f:
     lines = f.readlines()
-
+# Where did the old "first 25,000 usable lines" training set come from?
+kept_idx = [i for i, l in enumerate(lines) if len(l.strip()) > 30]
+print(f"[SPLIT CHECK] index of the 25,000th kept line: {kept_idx[24999]}")
+print("[SPLIT CHECK] the medical part is the first ~58,190 lines; "
+      "if this index is below that, the old training set was medical-only")
 print(f"[OK] Total lines: {len(lines):,}")
 
 # --- Line length distribution ---

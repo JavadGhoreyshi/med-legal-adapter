@@ -2,6 +2,8 @@
 Part 4: short training run with validation loss tracked during training.
 Run this only after part 3 has told you which init method to use.
 """
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import torch
 import matplotlib
 matplotlib.use("Agg")

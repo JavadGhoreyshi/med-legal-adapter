@@ -20,6 +20,6 @@ CONFIG = {
     "min_train_count":5,
     "ratio_threshold":5.0,
     "init_method":"subtoken_mean",
-    "max_steps_trend" : 300,
+    "max_steps_trend" : 1000,
     "learning_rate_phase2": 2e-5,
 }

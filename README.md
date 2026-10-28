@@ -7,7 +7,7 @@ domain-specific tokens to the vocabulary and training in phases
 ## Project Status
 
 - [x] Phase 0: Extract domain tokens from the medical + legal corpus
-- [ ] Phase 1: Embedding warm-up (backbone frozen, only embeddings trainable)
+- [x] Phase 1: Embedding warm-up (backbone frozen, only embeddings trainable)
       Saved at: `JavadGhoreyshi/med-legal-xlm-roberta`
 - [ ] Phase 2: Unfreeze the last 2 transformer layers with a lower learning rate
 - [ ] Phase 3: Evaluation and/or fine-tuning on the final task

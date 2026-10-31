@@ -167,7 +167,7 @@ def select_domain_tokens(tokenizer_json_path, base_tokenizer, train_lines, cfg, 
 
         candidates.append((word, count))
 
-    candidates.sort(key=lambda x: -x[1])   # most frequent in train first
+    candidates.sort(key=lambda x: (-x[1], x[0]))   # most frequent in train first
     selected = [w for w, _ in candidates[:cfg["num_new_tokens"]]]
 
     if verbose:

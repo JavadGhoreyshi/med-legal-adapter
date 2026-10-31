@@ -55,7 +55,6 @@ Rank of the correct new token when it is masked in a validation sentence (553 va
 # Phase 2
 !PYTHONPATH=. python scripts/train_phase2_unfreeze.py
 
-# Phase 3 (add here when ready)
 ```
 
 ## Reproducibility Note

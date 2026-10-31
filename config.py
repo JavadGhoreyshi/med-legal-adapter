@@ -10,7 +10,7 @@ CONFIG = {
     "batch_size": 16,
     "grad_accum_steps": 4,
     # فاز فعلی که روی هاگینگ‌فیس ذخیره شده
-    "current_phase": "phase1_warmup",
+    "current_phase": "phase2_unfreeze",
     "num_layers_to_unfreeze_phase2": 2,
     "learning_rate_phase1": 5e-4,
     "n_train":25000,

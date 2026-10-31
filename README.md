@@ -22,6 +22,19 @@ Rank of the correct new token when it is masked in a validation sentence (553 va
 - Validation MLM loss during phase 2: 5.766 before, 5.311 after. This loss is not directly comparable to `xlm-roberta-base` (4.28 on the same text), because the tokenizers differ.
 - Informal sanity check: on 5 simple general sentences, the phase 2 model gives the same top-1 prediction as `xlm-roberta-base`. This is a small check, not a benchmark.
 
+## Phase 3: Downstream Check (Persian-English question retrieval)
+
+Task: for each Persian medical question, find its English translation among 1000 test questions (and the reverse). Train/test pairs (4244 / 1000) come from corpus pairs that were never seen in phases 1-2 (`JavadGhoreyshi/med-legal-bilingual-pairs`). Both models were fine-tuned with the same contrastive setup (2 epochs, lr 2e-5, same seed), single run.
+
+| Model | fa->en top-1 | en->fa top-1 |
+|---|---|---|
+| xlm-roberta-base, before fine-tuning | 43.0% | 28.7% |
+| phase 2 model, before fine-tuning | 39.5% | 25.3% |
+| xlm-roberta-base, after fine-tuning | 97.4% | 96.6% |
+| phase 2 model, after fine-tuning | 96.4% | 95.4% |
+
+Conclusion: on this task the adapted model shows no measurable advantage over the base model. The differences (about 1 point) are within the noise of a single run on 1000 test pairs. The task is probably too easy (both models reach about 97%), so it cannot separate them. What the adaptation did achieve: the tokenizer is about 9% more efficient on the validation text, and the new tokens were learned (median rank of the correct new token: 462 at initialization, 85 after phase 1, 32 after phase 2).
+
 ## Phase Details
 
 - Phase 1: only the new embedding rows are trained (old rows are kept unchanged by zeroing their gradients). Learning rate 5e-4, 1 epoch.

@@ -13,18 +13,18 @@ tok = AutoTokenizer.from_pretrained(repo1)
 OLD = len(AutoTokenizer.from_pretrained(CONFIG["base_model"]))
 model = AutoModelForMaskedLM.from_pretrained(repo1)
 
-# 1) همه چیز فریز
+# 1) Freeze everything
 for p in model.parameters():
     p.requires_grad = False
 
-# 2) embedding (فقط ردیف‌های جدید)
+# 2) Embedding: only the new rows are 
 emb = model.get_input_embeddings().weight
 emb.requires_grad = True
 emb_mask = torch.zeros(emb.shape[0], 1)
 emb_mask[OLD:] = 1.0
 emb.register_hook(lambda g: g * emb_mask.to(g.device, g.dtype))
 
-# 3) bias خروجی (فقط ردیف‌های جدید)
+# 3) Output bias: only the new rows are 
 bias = model.lm_head.bias
 bias.requires_grad = True
 bias_mask = torch.zeros(bias.shape[0])
@@ -32,7 +32,7 @@ bias_mask[OLD:] = 1.0
 bias.register_hook(lambda g: g * bias_mask.to(g.device, g.dtype))
 print("bias mean old/new:", bias[:OLD].mean().item(), bias[OLD:].mean().item())
 
-# 4) لایه‌های آخر
+# 4)  Last encoder layers
 n = CONFIG["num_layers_to_unfreeze_phase2"]
 layer_params = []
 for layer in model.roberta.encoder.layer[-n:]:
@@ -48,7 +48,7 @@ optimizer = torch.optim.AdamW([
     {"params": layer_params, "lr": CONFIG["learning_rate_phase2"]},
 ], weight_decay=0.0)
 
-# 5) داده
+# 5) Data
 CORPUS_PATH = find_file("bilingual_med_legal_corpus.txt")
 train_lines, val_lines = load_split(CORPUS_PATH, CONFIG["n_train"], CONFIG["n_val"], CONFIG["seed"])
 train_ds = tokenize_lines(train_lines, tok, CONFIG["max_length"])
@@ -81,7 +81,7 @@ print("[BASELINE] val loss before phase 2:", round(trainer.evaluate()["eval_loss
 trainer.train()
 print("[FINAL] val loss after phase 2:", round(trainer.evaluate()["eval_loss"], 3))
 
-# 6) چک سلامت و ذخیره
+# 6) Integrity check and save
 ok_emb = torch.equal(model.get_input_embeddings().weight[:OLD].detach().cpu(), old_emb)
 ok_bias = torch.equal(model.lm_head.bias[:OLD].detach().cpu(), old_bias)
 print("[INTEGRITY] old embedding rows unchanged:", ok_emb, "| old bias unchanged:", ok_bias)

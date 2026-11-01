@@ -133,4 +133,3 @@ Model `v4` was created with an earlier version of `utils.py`. When token selecti
 - Phase 3 pairs: Hugging Face Hub (`JavadGhoreyshi/med-legal-bilingual-pairs`)
 - Training runs: Kaggle (GPU)
 
-Legacy Hugging Face repositories, not used by the current scripts: `med-legal-xlm-roberta` (v1, only referenced by `03_pretraining_sanity.py`), `med-legal-xlm-roberta-v3` (broken), `med-legal-tokenized-dataset`, `-v3` and `-v4`.

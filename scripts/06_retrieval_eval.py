@@ -1,14 +1,14 @@
 import json, random, torch, gc
 import torch.nn.functional as F
-from kaggle_secrets import UserSecretsClient
-from huggingface_hub import login, hf_hub_download
+from huggingface_hub import hf_hub_download
 from transformers import AutoTokenizer, AutoModel
 from config import CONFIG
+from utils import hf_login
 
-login(token=UserSecretsClient().get_secret("HF_TOKEN"))
-dev = "cuda"
+hf_login()
+dev = "cuda" if torch.cuda.is_available() else "cpu"
 
-path = hf_hub_download("JavadGhoreyshi/med-legal-bilingual-pairs",
+path = hf_hub_download(CONFIG["pairs_repo"],
                        "pairs_unseen.jsonl", repo_type="dataset")
 rows = [json.loads(l) for l in open(path, encoding="utf-8")]
 random.Random(42).shuffle(rows)

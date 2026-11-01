@@ -1,6 +1,7 @@
 CONFIG = {
     "model_repo": "JavadGhoreyshi/med-legal-xlm-roberta-v4",
     "legacy_repo": "JavadGhoreyshi/med-legal-xlm-roberta",
+    "pairs_repo": "JavadGhoreyshi/med-legal-bilingual-pairs",
     "base_model": "xlm-roberta-base",
     "max_length": 128,
     "mlm_probability": 0.15,

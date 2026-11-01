@@ -1,12 +1,10 @@
 import torch
-from kaggle_secrets import UserSecretsClient
-from huggingface_hub import login
 from transformers import (AutoTokenizer, AutoModelForMaskedLM, Trainer,
                           TrainingArguments, DataCollatorForLanguageModeling)
 from config import CONFIG
-from utils import find_file, load_split, tokenize_lines
+from utils import find_file, hf_login, load_split, tokenize_lines
 
-login(token=UserSecretsClient().get_secret("HF_TOKEN"))
+hf_login()
 
 repo1 = CONFIG["model_repo"]
 repo2 = repo1 + "-phase2"
